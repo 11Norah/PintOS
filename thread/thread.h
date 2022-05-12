@@ -91,7 +91,9 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+    struct list_elem elem;  /* List element. */
+    int init_priority;                /* initial assigned Priority. */
+    struct list locks;      /* Locks held by thread. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -137,5 +139,8 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
+bool compare_locks_priority(const struct list_elem *,const struct list_elem *,void *);
+bool compare_threads_priority(const struct list_elem *,const struct list_elem *,void *);
+void update_priority(struct thread*);
+void donate_priority(struct thread*);
 #endif /* threads/thread.h */
