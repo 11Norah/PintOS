@@ -580,14 +580,14 @@ allocate_tid (void)
 }
 bool compare_locks_priority(const struct list_elem *first,const struct list_elem *second,void *aux UNUSED)
 {
-    struct lock *first_lock = list_entry (first, struct lock, element);
-    struct lock *second_lock = list_entry (second, struct lock, element);
+    struct lock *first_lock = list_entry (first, struct lock, elem);
+    struct lock *second_lock = list_entry (second, struct lock, elem);
     return first_lock -> priority > second_lock -> priority;
 }
 bool compare_threads_priority(const struct list_elem *first,const struct list_elem *second,void *aux UNUSED)
 {
-    struct thread *first_thread = list_entry (first, struct thread, element);
-    struct thread *second_thread = list_entry (second, struct thread, element);
+    struct thread *first_thread = list_entry (first, struct thread, elem);
+    struct thread *second_thread = list_entry (second, struct thread, elem);
     return first_thread -> priority > second_thread -> priority;
 }
 void update_priority(struct thread* thread)
@@ -596,7 +596,7 @@ void update_priority(struct thread* thread)
     int priority = thread -> init_priority;
     if(!list_empty(&thread -> locks)){
         list_sort(&t->locks, compare_locks_priority, NULL);
-        int lock_priority = list_entry (list_front (&t->locks),struct lock, element) -> priority;
+        int lock_priority = list_entry (list_front (&t->locks),struct lock, elem) -> priority;
         if(lock_priority > priority){
             priority = lock_priority;
         }
@@ -609,8 +609,8 @@ void donate_priority(struct thread* thread)
     enum intr_level old_level = intr_disable();
     update_priority(thread);
     if(thread -> status == THREAD_READY ){
-        list_remove(&t -> element);
-        list_insert_ordered(&ready_list ,&thread -> element ,compare_threads_priority ,NULL );
+        list_remove(&t -> elem);
+        list_insert_ordered(&ready_list ,&thread -> elem ,compare_threads_priority ,NULL );
     }
     intr_set_level(old_level);
 }
