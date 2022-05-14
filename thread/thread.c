@@ -595,8 +595,8 @@ void update_priority(struct thread* thread)
     enum intr_level old_level = intr_disable();
     int priority = thread -> init_priority;
     if(!list_empty(&thread -> locks)){
-        list_sort(&t->locks, compare_locks_priority, NULL);
-        int lock_priority = list_entry (list_front (&t->locks),struct lock, elem) -> priority;
+        list_sort(&thread->locks, compare_locks_priority, NULL);
+        int lock_priority = list_entry (list_front (&thread->locks),struct lock, elem) -> priority;
         if(lock_priority > priority){
             priority = lock_priority;
         }
@@ -609,7 +609,7 @@ void donate_priority(struct thread* thread)
     enum intr_level old_level = intr_disable();
     update_priority(thread);
     if(thread -> status == THREAD_READY ){
-        list_remove(&t -> elem);
+        list_remove(&thread -> elem);
         list_insert_ordered(&ready_list ,&thread -> elem ,compare_threads_priority ,NULL );
     }
     intr_set_level(old_level);
