@@ -172,6 +172,25 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  if(thread_mlfqs){ //in case advanced scedular  
+
+
+  increment_cpu_by1();
+
+
+  //every 1 sec recalculate load avg and recent cpu of all threads 
+  if (ticks % TIMER_FREQ ==0){ //1 sec
+    calculating_load_avg(); //recalculate load avg 
+    recalculate_recent_cpu_for_all_threads();  //recalculate recent cpu of all threads
+    recalculate_priority_for_all_threads();
+  }
+
+  if(ticks%4==0){
+    //recalculate priority of all threads  
+    recalculate_priority_for_all_threads();
+  }
+
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
