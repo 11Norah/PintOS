@@ -151,5 +151,7 @@ bool compare_locks_priority(const struct list_elem *,const struct list_elem *,vo
 bool compare_threads_priority(const struct list_elem *,const struct list_elem *,void *);
 void update_priority(struct thread*);
 void donate_priority(struct thread*);
+void preempt (void);
+void remove_lock(struct lock*);
 
 #endif /* threads/thread.h */
