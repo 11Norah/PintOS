@@ -352,11 +352,12 @@ thread_set_priority (int new_priority)
     return;          //Disable the priority setting 
   }
   enum intr_level old_level = intr_disable();
-   
-  int pri = thread_current ()->priority;
-  thread_current ()->priority = new_priority;
-  if(new_priority < pri )
-    thread_yield();
+  struct thread* thread = thread_current();
+  thread->init_priority = new_priority;
+  if(new_priority < thread->priority && list_empty(&thread->locks)){
+    thread->priority = new_priority;
+    preempt();
+  }
   intr_set_level (old_level);
 }
 
@@ -484,6 +485,11 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+   // PRIORITY SCHEDULER
+  t ->init_priority = priority;
+  list_init(&t->locks);
+  t->lock_waiting = NULL;
+   
   t->nice=0;
   t->recent_cpu=real_const(0);
   t->magic = THREAD_MAGIC;
@@ -492,6 +498,7 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+   
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
