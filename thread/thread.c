@@ -348,7 +348,11 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+   if(thread_mlfqs) { //check if the advanced schedular is being used
+    return;          //Disable the priority setting 
+  }
   enum intr_level old_level = intr_disable();
+   
   int pri = thread_current ()->priority;
   thread_current ()->priority = new_priority;
   if(new_priority < pri )
@@ -480,7 +484,10 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->nice=0;
+  t->recent_cpu=real_const(0);
   t->magic = THREAD_MAGIC;
+   
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
