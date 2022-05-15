@@ -639,6 +639,12 @@ bool compare_threads_priority(const struct list_elem *first,const struct list_el
     return first_thread -> priority > second_thread -> priority;
 }
 
+void remove_lock (struct lock *lock){
+   enum intr_level old_level = intr_disable ();
+  list_remove (&lock->elem);
+  update_priority (thread_current ()); 
+  intr_set_level (old_level);
+}
 
 void update_priority(struct thread* thread)
 {
