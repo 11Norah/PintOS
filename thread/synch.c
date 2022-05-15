@@ -209,8 +209,15 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  struct thread thread = thread_current();
+  if ( lock->holder != NULL && !thread_mlfqs ){
+     thread->lock_waiting = lock ;
+    struct lock* hold = lock;
+     for(int d = 0 ; hold && d<DONATION_DEPTH &&  thread->priority > hold->priority; d++){
+         hold->priority = thread->priority ; 
+         donate_priority(hold->holder); 
+         hold = hold->holder->lock_waiting ;
+     }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -241,11 +248,17 @@ lock_try_acquire (struct lock *lock)
 void
 lock_release (struct lock *lock) 
 {
-  ASSERT (lock != NULL);
+ ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  
+  enum intr_level old_level = intr_disable();
 
+  if (!thread_mlfqs) /*  IF ADVANCED SCHEDULER OFF */
+    remove_lock (lock);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  
+  intr_set_level(old_level);
 }
 
 /* Returns true if the current thread holds LOCK, false
