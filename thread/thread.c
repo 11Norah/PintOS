@@ -652,6 +652,16 @@ void donate_priority(struct thread* thread)
     }
     intr_set_level(old_level);
 }
+void preempt(void)
+{
+   enum intr_level old_level= intr_disable();
+  if (!list_empty (&ready_list)){
+    if(thread_current()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority ){
+       thread_yield ();
+    }
+  }
+  intr_set_level(old level);
+}
 
 /**************advanced scheduling******************/
 
