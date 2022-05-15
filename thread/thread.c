@@ -58,6 +58,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+float load_avg;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -623,6 +624,8 @@ bool compare_threads_priority(const struct list_elem *first,const struct list_el
     struct thread *second_thread = list_entry (second, struct thread, elem);
     return first_thread -> priority > second_thread -> priority;
 }
+
+
 void update_priority(struct thread* thread)
 {
     enum intr_level old_level = intr_disable();
@@ -637,6 +640,8 @@ void update_priority(struct thread* thread)
     thread -> priority = priority;
     intr_set_level(old_level);
 }
+
+
 void donate_priority(struct thread* thread)
 {
     enum intr_level old_level = intr_disable();
@@ -650,8 +655,46 @@ void donate_priority(struct thread* thread)
 
 /**************advanced scheduling******************/
 
+void calculating_load_avg(void)
+{
+  size_t ready_threads = list_size (&ready_list);
+  if (thread_current () != idle_thread){
+     ready_threads++; }
+  load_avg = real_add (real_div_int (real_mult_int (load_avg, 59), 60) , real_div_int (real_const (ready_threads), 60));
 
 
+}
+
+
+void calculating_recent_cpu(struct thread *t)
+{
+  float decay =real_div( real_mult_int(load_avg , 2) , real_add_int(real_mult_int(load_avg , 2) , 1) ) ;
+  t->recent_cpu =real_add_int(eal_mult_int(decay , t->recent_cpu) , t->nice);
+
+}
+
+
+void increment_cpu_by1(void)
+{
+    struct thread *th= thread_current();
+    th-> recent_cpu = real_add_int( th->recent_cpu , 1);
+}
+
+void update_priority_advanced(struct thread *t)
+{
+
+  t->priority = real_int (real_sub_int (real_sub (real_const (PRI_MAX),
+   real_div_int (t->recent_cpu, 4)),
+    2 * t->nice));
+
+  //check priority limits
+  if (t->priority > PRI_MAX){
+    t->priority = PRI_MAX; }
+  else if (t->priority < PRI_MIN){
+    t->priority = PRI_MIN; }
+
+
+}
 
 
 /* Offset of `stack' member within `struct thread'.
