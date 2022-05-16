@@ -161,7 +161,7 @@ void calculating_load_avg(void);
 void calculating_recent_cpu(struct thread *t);
 void increment_cpu_by1(void);
 void update_priority_advanced(struct thread *t);
-void recalculate_priority_for_all_threads();
-void recalculate_recent_cpu_for_all_threads();
+void recalculate_priority_for_all_threads(void);
+void recalculate_recent_cpu_for_all_threads(void);
 
 #endif /* threads/thread.h */
