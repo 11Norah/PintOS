@@ -4,15 +4,16 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
-  {
+{
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
-  };
+};
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
@@ -81,7 +82,7 @@ typedef int tid_t;
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
 struct thread
-  {
+{
     /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
@@ -90,7 +91,7 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
     int nice;
-    real recent_cpu;
+    Real recent_cpu;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;
@@ -105,7 +106,7 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-  };
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -153,5 +154,13 @@ void update_priority(struct thread*);
 void donate_priority(struct thread*);
 void preempt (void);
 void remove_lock(struct lock*);
+
+//advanced scheduling
+void calculating_load_avg(void);
+void calculating_recent_cpu(struct thread *t);
+void increment_cpu_by1(void);
+void update_priority_advanced(struct thread *t);
+void recalculate_priority_for_all_threads();
+void recalculate_recent_cpu_for_all_threads();
 
 #endif /* threads/thread.h */
