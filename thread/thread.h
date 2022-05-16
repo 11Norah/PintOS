@@ -158,9 +158,9 @@ void remove_lock(struct lock*);
 
 //advanced scheduling
 void calculating_load_avg(void);
-void calculating_recent_cpu(struct thread *t);
+void calculating_recent_cpu(struct thread *t, void* aux UNUSED);
 void increment_cpu_by1(void);
-void update_priority_advanced(struct thread *t);
+void update_priority_advanced(struct thread *t, void* aux UNUSED);
 void recalculate_priority_for_all_threads(void);
 void recalculate_recent_cpu_for_all_threads(void);
 
