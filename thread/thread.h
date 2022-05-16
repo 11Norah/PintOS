@@ -98,7 +98,7 @@ struct thread
     /* List element. */
     int init_priority;                /* initial assigned Priority. */
     struct list locks;                /* List element. */
-
+   struct lock *lock_waiting;  
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
