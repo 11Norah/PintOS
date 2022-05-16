@@ -93,7 +93,7 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
     int nice;
     Real recent_cpu;
-
+    int64_t wakeUp;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;
     /* List element. */
