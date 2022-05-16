@@ -508,7 +508,7 @@ init_thread (struct thread *t, const char *name, int priority)
     t->lock_waiting = NULL;
 
     t->nice=0;
-    t->recent_cpu=real_const(0);
+    t->recent_cpu=convert_to_real(0);
     t->magic = THREAD_MAGIC;
 
 
@@ -719,7 +719,7 @@ void calculating_recent_cpu(struct thread *t)
     Real decay = divide_real_by_real(multiply_real_and_int(load_avg , 2) ,
                                      add_real_to_int(multiply_real_and_int(load_avg , 2) ,
                                                      1) ) ;
-    t->recent_cpu = add_real_to_int(multiply_real_and_int(decay , t->recent_cpu) ,
+    t->recent_cpu = add_real_to_int(multiply_real_and_real(decay , t->recent_cpu) ,
                                     t->nice);
 
 }
@@ -748,15 +748,13 @@ void update_priority_advanced(struct thread *t)
 }
 
 //This function recalculates the advanced scheduling priority for all threads.
-void
-recalculate_priority_for_all_threads()
+void recalculate_priority_for_all_threads()
 {
     thread_foreach(&update_priority_advanced, NULL);
 }
 
 //This function calculates the recent cpu time for all threads.
-void
-recalculate_recent_cpu_for_all_threads()
+void recalculate_recent_cpu_for_all_threads()
 {
     thread_foreach(&calculating_recent_cpu, NULL);
 }
