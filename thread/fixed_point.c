@@ -58,6 +58,13 @@ Real multiply_real_and_int(Real real_number, int integer)
     return prod;
 }
 
+Real multiply_real_and_real(Real num1, Real num2)
+{
+    Real prod;
+    prod.value = (num1.value * num2.value) >> DECIMAL_BITS;
+    return prod;
+}
+
 Real divide_real_by_int(Real real_number, int integer)
 {
     Real quotient;
