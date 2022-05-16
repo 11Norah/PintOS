@@ -1,7 +1,8 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-
+#define MAX_DONATION_DEPTH 8
 #include <debug.h>
+
 #include <list.h>
 #include <stdint.h>
 #include "fixed_point.h"
