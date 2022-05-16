@@ -1,3 +1,5 @@
+
+
 #include "devices/timer.h"
 #include <debug.h>
 #include <inttypes.h>
@@ -17,13 +19,13 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+//solution to alarm
+/* Waiting queue of timer_sleep */
+struct list sleep_list;
+
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
-struct semaphore sema;
-
-struct list sleep_list;
-static struct list  priority_sleep_list;
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -41,8 +43,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-list_init(&sleep_list);
- list_init(&priority_sleep_list);
+  list_init(&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -89,6 +90,7 @@ timer_elapsed (int64_t then)
 {
   return timer_ticks () - then;
 }
+
 //Compare the wake up time of two threads
 bool wakeUp_CMP(struct list_elem *first, struct list_elem *second, void *aux)
 {
@@ -103,8 +105,9 @@ bool wakeUp_CMP(struct list_elem *first, struct list_elem *second, void *aux)
 void
 timer_sleep (int64_t ticks) 
 {
-  /*int64_t start = timer_ticks ();
+  
 
+  /*int64_t start = timer_ticks ();
   ASSERT (intr_get_level () == INTR_ON);
   while (timer_elapsed (start) < ticks) 
     thread_yield ();*/
@@ -112,7 +115,6 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
   struct thread* curthread;
 	//enum intr_level curlevel;
-
   ASSERT (intr_get_level () == INTR_ON);
  //while (timer_elapsed (start) < ticks)
   
@@ -128,7 +130,6 @@ timer_sleep (int64_t ticks)
    
   thread_block();
   
-
   //intr_set_level(curlevel);
  // while(&s)
   //timer_interrupt(curlevel);
@@ -137,7 +138,6 @@ timer_sleep (int64_t ticks)
   //while (timer_elapsed (start) < ticks) 
    // thread_yield ();
     
-
 */
    //Avoiding no busy waiting by using list of sleepers
    struct thread* curthread;
@@ -147,22 +147,20 @@ timer_sleep (int64_t ticks)
    if(ticks <= 0) return; 
   ASSERT (intr_get_level () == INTR_ON);
   
-  
+   curlevel = intr_disable(); 
   curthread = thread_current();
 //calculate wake up time for a thread
   curthread->wakeUp = timer_ticks() + ticks;
-  
+   
   //blocking threads until wake up time
- if(timer_elapsed(start)<ticks){
-  curlevel = intr_disable();  //interupts disabled
+ //                if(timer_elapsed(start)<ticks){
+ //interupts disabled
   //when a thread is blocked, it will be put to the sleep list based on its wakeup time
   list_insert_ordered (&sleep_list, &curthread->elem, wakeUp_CMP, NULL);
 
   thread_block(); //block the current thread
-
-
-  intr_set_level(curlevel); //enable interrupt
- }
+ //         }
+ intr_set_level(curlevel); //enable interrupt
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -191,7 +189,6 @@ timer_nsleep (int64_t ns)
 
 /* Busy-waits for approximately MS milliseconds.  Interrupts need
    not be turned on.
-
    Busy waiting wastes CPU cycles, and busy waiting with
    interrupts off for the interval between timer ticks or longer
    will cause timer ticks to be lost.  Thus, use timer_msleep()
@@ -204,7 +201,6 @@ timer_mdelay (int64_t ms)
 
 /* Sleeps for approximately US microseconds.  Interrupts need not
    be turned on.
-
    Busy waiting wastes CPU cycles, and busy waiting with
    interrupts off for the interval between timer ticks or longer
    will cause timer ticks to be lost.  Thus, use timer_usleep()
@@ -217,7 +213,6 @@ timer_udelay (int64_t us)
 
 /* Sleeps execution for approximately NS nanoseconds.  Interrupts
    need not be turned on.
-
    Busy waiting wastes CPU cycles, and busy waiting with
    interrupts off for the interval between timer ticks or longer
    will cause timer ticks to be lost.  Thus, use timer_nsleep()
@@ -235,42 +230,32 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-/* Comparing threads according to priority*/
-
-bool less_priority(const struct list_elem *a,
-                    const struct list_elem *b, void *aux UNUSED)
-{
-  int p1 = (list_entry(a, struct thread, elem))->priority;
-  int p2 = (list_entry(b, struct thread, elem))->priority;
-  return (p1<=p2);
-}
-
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  
+   enum intr_level old_state = intr_disable();
   ticks++;
-  enum intr_level old_state = intr_disable();
-  //bool preempt = false;
+   thread_tick();
   struct thread *thread_top;
   struct list_elem *element;
   bool yield=false;
     //if it's a if condition not a while loop, we cannot pass the alarm-simultaneous test, but fine for the others
    while (!list_empty(&sleep_list))  //check the blocked_list if it is not empty
     {
-       element=list_front(&sleep_list);
-        thread_top = list_entry(element, struct thread, elem);    //get the top elem of the blocked_list
+       
+        thread_top = list_entry(list_front(&sleep_list), struct thread, elem);    //get the top elem of the blocked_list
         //check if it’s the right time to wake up the top thread in timer_interrupt() 
-        if (thread_top->wakeUp > timer_ticks() || thread_top->status ==THREAD_BLOCKED)
+        if (thread_top->wakeUp > timer_ticks() )
             break;
         list_pop_front(&sleep_list);      //remove the front element
          //storing waken up threads in order according to priority
 //       list_insert_ordered(&priority_sleep_list,&thread_top->elem,less_priority,0);
        thread_unblock(thread_top);
-          
-       // preempt = true;
+       
     }
-    if(thread_mlfqs){ //in case advanced scedular  
+  if(thread_mlfqs){ //in case advanced scedular  
 
 
   increment_cpu_by1();
@@ -283,34 +268,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
     recalculate_priority_for_all_threads();
   }
 
-  if(ticks%4==0){
+  else if(ticks%4==0){
     //recalculate priority of all threads  
     recalculate_priority_for_all_threads();
   }
-
-  }
-
-//  if (preempt)
-  //  intr_yield_on_return ();
-    // unblocking waken up  threads according to priority
-/*  while(!list_empty(&priority_sleep_list)){
-   
-   element=list_pop_back(&priority_sleep_list);
-   thread_unblock(thread_top);
-
-  }
-   intr_set_level(old_state);
-   thread_tick ();*/
- 
-    /* Actions for 4.4BSD scheduler. 
-  if (thread_mlfqs)
-    {
-      thread_mlfqs_incr_recent_cpu ();
-      if (ticks % TIMER_FREQ == 0)
-        thread_mlfqs_refresh ();
-      else if (ticks % 4 == 0)
-        thread_mlfqs_update_priority (thread_current ())
-    }*/
+  intr_set_level (old_state);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -334,7 +296,6 @@ too_many_loops (unsigned loops)
 
 /* Iterates through a simple loop LOOPS times, for implementing
    brief delays.
-
    Marked NO_INLINE because code alignment can significantly
    affect timings, so that if this function was inlined
    differently in different places the results would be difficult
@@ -383,3 +344,5 @@ real_time_delay (int64_t num, int32_t denom)
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
 }
+
+    
