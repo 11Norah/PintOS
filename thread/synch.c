@@ -213,7 +213,7 @@ lock_acquire (struct lock *lock)
   if ( lock->holder != NULL && !thread_mlfqs ){
      thread->lock_waiting = lock ;
     struct lock* hold = lock;
-     for(int d = 0 ; hold && d<DONATION_DEPTH &&  thread->priority > hold->priority; d++){
+     for(int d = 0 ; hold && d<MAX_DONATION_DEPTH &&  thread->priority > hold->priority; d++){
          hold->priority = thread->priority ; 
          donate_priority(hold->holder); 
          hold = hold->holder->lock_waiting ;
