@@ -14,6 +14,6 @@ Real subtract_int_from_real(Real real_number, int integer);
 Real subtract_real_from_real(Real num1, Real num2);
 Real multiply_real_and_int(Real real_number, int integer);
 Real divide_real_by_int(Real real_number, int integer);
-Real divide_real_by_real(Real num1, Real num2)
+Real divide_real_by_real(Real num1, Real num2);
 
 #endif //PINTOS_FIXED_POINT_H
