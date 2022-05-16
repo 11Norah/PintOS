@@ -748,13 +748,13 @@ void update_priority_advanced(struct thread *t, void* aux UNUSED)
 }
 
 //This function recalculates the advanced scheduling priority for all threads.
-void recalculate_priority_for_all_threads()
+void recalculate_priority_for_all_threads(void)
 {
     thread_foreach(&update_priority_advanced, NULL);
 }
 
 //This function calculates the recent cpu time for all threads.
-void recalculate_recent_cpu_for_all_threads()
+void recalculate_recent_cpu_for_all_threads(void)
 {
     thread_foreach(&calculating_recent_cpu, NULL);
 }
