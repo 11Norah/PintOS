@@ -378,7 +378,7 @@ thread_set_nice (int nice UNUSED)
     struct thread *cur = thread_current();
     cur->nice = nice;
     //set the  priority of this thread
-    update_priority_advanced(thread_current());
+    update_priority_advanced(thread_current(), NULL);
     //premeet
     if (!list_empty (&ready_list)){
         if(thread_current()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority ){
@@ -413,7 +413,7 @@ int
 thread_get_recent_cpu (void)
 {
     /* Not yet implemented. */
-    return real_round(real_mult_int(thread_current()->recent_cpu,100));
+    return round_real_to_int(multiply_real_and_int(thread_current()->recent_cpu,100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -697,7 +697,7 @@ void preempt(void)
             thread_yield ();
         }
     }
-    intr_set_level(old level);
+    intr_set_level(old_level);
 }
 
 /**************advanced scheduling******************/
@@ -714,7 +714,7 @@ void calculating_load_avg(void)
 }
 
 
-void calculating_recent_cpu(struct thread *t)
+void calculating_recent_cpu(struct thread *t, void* aux UNUSED)
 {
     Real decay = divide_real_by_real(multiply_real_and_int(load_avg , 2) ,
                                      add_real_to_int(multiply_real_and_int(load_avg , 2) ,
@@ -731,7 +731,7 @@ void increment_cpu_by1(void)
     th-> recent_cpu = add_real_to_int( th->recent_cpu , 1);
 }
 
-void update_priority_advanced(struct thread *t)
+void update_priority_advanced(struct thread *t, void* aux UNUSED)
 {
 
     t->priority = convert_to_integer(subtract_int_from_real(subtract_real_from_real(convert_to_real(PRI_MAX),
