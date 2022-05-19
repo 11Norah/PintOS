@@ -99,7 +99,7 @@ struct thread
     /* List element. */
     int init_priority;                /* initial assigned Priority. */
     struct list locks;                /* List element. */
-   struct lock *lock_waiting;  
+    struct lock *lock_waiting;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -155,6 +155,7 @@ void update_priority(struct thread*);
 void donate_priority(struct thread*);
 void preempt (void);
 void remove_lock(struct lock*);
+void add_lock(struct lock *lock);
 
 //advanced scheduling
 void calculating_load_avg(void);
