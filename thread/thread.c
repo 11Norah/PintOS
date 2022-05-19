@@ -11,7 +11,6 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -206,13 +205,7 @@ thread_create (const char *name, int priority,
     thread_unblock (t);
 
     // PREEMPTION (CHECKED PIRTIORITY )
-    enum intr_level old_level= intr_disable();
-    if (!list_empty (&ready_list)){
-        if(thread_current()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority ){
-            thread_yield ();
-        }
-    }
-    intr_set_level(old_level);
+    preempt();
 
     return tid;
 }
@@ -341,8 +334,35 @@ thread_foreach (thread_action_func *func, void *aux)
          e = list_next (e))
     {
         struct thread *t = list_entry (e, struct thread, allelem);
-        func (t, aux);
+        if(t != idle_thread)
+            func (t, aux);
     }
+}
+
+void
+add_lock(struct lock *lock){
+
+
+    enum intr_level old_level =
+            intr_disable ();
+/* Disable interrupts
+*/
+
+
+    struct thread *t =
+            thread_current();
+
+
+    list_insert_ordered (&t->locks, &lock->elem,compare_locks_priority,
+                         NULL);
+
+
+
+
+
+    intr_set_level (old_level);
+
+
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -379,12 +399,8 @@ thread_set_nice (int nice UNUSED)
     cur->nice = nice;
     //set the  priority of this thread
     update_priority_advanced(thread_current(), NULL);
-    //premeet
-    if (!list_empty (&ready_list)){
-        if(thread_current()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority ){
-            thread_yield ();
-        }
-    }
+    preempt();
+
     intr_set_level (old_level);
 
 
@@ -506,11 +522,9 @@ init_thread (struct thread *t, const char *name, int priority)
     t ->init_priority = priority;
     list_init(&t->locks);
     t->lock_waiting = NULL;
-
     t->nice=0;
     t->recent_cpu=convert_to_real(0);
     t->magic = THREAD_MAGIC;
-
 
     old_level = intr_disable ();
     list_push_back (&all_list, &t->allelem);
@@ -713,6 +727,8 @@ void calculating_load_avg(void)
 
 }
 
+//decay = ((load_avg*2)/((load_avg*2)+1)
+//recent_cpu = (decay*recent_cpu)+nice
 
 void calculating_recent_cpu(struct thread *t, void* aux UNUSED)
 {
@@ -728,6 +744,7 @@ void calculating_recent_cpu(struct thread *t, void* aux UNUSED)
 void increment_cpu_by1(void)
 {
     struct thread *th= thread_current();
+    if(th == idle_thread) return;
     th-> recent_cpu = add_real_to_int( th->recent_cpu , 1);
 }
 
