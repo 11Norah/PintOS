@@ -594,7 +594,7 @@ void push_to_stack(char* args, void** esp, char** save_ptr)
     for(int i = count_args-1; i >= 0 ; i--){
         stack_ptr -=  sizeof(char*);
         *(char**)stack_ptr = arguments;
-        args += strlen(arguments)+1;
+        arguments += strlen(arguments)+1;
     }
 
     char** address = (char**)stack_ptr;
