@@ -28,32 +28,32 @@ struct thread* tid_child(tid_t tid);
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *file_name) 
+process_execute (const char *file_name)
 {
-  char *fn_copy;
-  tid_t tid;
+    char *fn_copy;
+    tid_t tid;
 
-  /* Make a copy of FILE_NAME.
-     Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
+    /* Make a copy of FILE_NAME.
+       Otherwise there's a race between the caller and load(). */
+    fn_copy = palloc_get_page (0);
+    if (fn_copy == NULL)
+        return TID_ERROR;
+    strlcpy (fn_copy, file_name, PGSIZE);
+
+    /* Create a new thread to execute FILE_NAME. */
+    tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+    /*mycode */
+    sema_down(&thread_current()->parent_child_sync);
+    /*mycode*/
+    if (tid == TID_ERROR)
+        palloc_free_page (fn_copy);
+
+    /*my code */
+    if (thread_current()->child_creation_success)
+        return tid;
+
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
-
-  /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-   /*mycode */
-   sema_down(&thread_current()->parent_child_sync); 
-   /*mycode*/
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
-   
-  /*my code */ 
-   if (thread_current()->child_creation_success)
-    return tid;
-   
-  return TID_ERROR;
-   /*my code */
+    /*my code */
 }
 
 /* A thread function that loads a user process and starts it
@@ -61,46 +61,46 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  char *file_name = file_name_;
-  struct intr_frame if_;
-  bool success;
+    char *file_name = file_name_;
+    struct intr_frame if_;
+    bool success;
 
-  /* Initialize interrupt frame and load executable. */
-  memset (&if_, 0, sizeof if_);
-  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-  if_.cs = SEL_UCSEG;
-  if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
-   /* my code */ 
-   struct thread* parent = thread_current()->parent;
-   if(!success){
-    parent->child_creation_success = 0; 
-    sema_up(&parent->parent_child_sync);
-   }else{ 
-      //success load//
-      struct list* children = &parent->children;
-      struct thread* child = thread_current();
-      list_push_back(children,&child->child_elem); 
-      parent->child_creation_success = 1;
-      sema_up(&parent->parent_child_sync); 
-      sema_down(&thread_current()->parent_child_sync);
-   }
-   
-   
-   /* my code */ 
-
-  /* If load failed, quit. */
-  palloc_free_page (file_name);
+    /* Initialize interrupt frame and load executable. */
+    memset (&if_, 0, sizeof if_);
+    if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
+    if_.cs = SEL_UCSEG;
+    if_.eflags = FLAG_IF | FLAG_MBS;
+    success = load (file_name, &if_.eip, &if_.esp);
+    /* my code */
+    struct thread* parent = thread_current()->parent;
+    if(!success){
+        parent->child_creation_success = 0;
+        sema_up(&parent->parent_child_sync);
+    }else{
+        //success load//
+        struct list* children = &parent->children;
+        struct thread* child = thread_current();
+        list_push_back(children,&child->child_elem);
+        parent->child_creation_success = 1;
+        sema_up(&parent->parent_child_sync);
+        sema_down(&thread_current()->parent_child_sync);
+    }
 
 
-  /* Start the user process by simulating a return from an
-     interrupt, implemented by intr_exit (in
-     threads/intr-stubs.S).  Because intr_exit takes all of its
-     arguments on the stack in the form of a `struct intr_frame',
-     we just point the stack pointer (%esp) to our stack frame
-     and jump to it. */
-  asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
-  NOT_REACHED ();
+    /* my code */
+
+    /* If load failed, quit. */
+    palloc_free_page (file_name);
+
+
+    /* Start the user process by simulating a return from an
+       interrupt, implemented by intr_exit (in
+       threads/intr-stubs.S).  Because intr_exit takes all of its
+       arguments on the stack in the form of a `struct intr_frame',
+       we just point the stack pointer (%esp) to our stack frame
+       and jump to it. */
+    asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
+    NOT_REACHED ();
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -112,23 +112,23 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
-{ /*my code */ 
-   thread_current()-> waiting_for = tid;
+process_wait (tid_t child_tid UNUSED)
+{ /*my code */
+    thread_current()-> waiting_for = tid;
     struct thread* child = tid_child(tid);
 
-    if(child != NULL){ 
+    if(child != NULL){
 
         list_remove(&child->child_elem); // Remove child from children list
         sema_up(&child->parent_child_sync); // Wake up child
         sema_down(&thread_current()->wait_for_child); // Wait for child to exit
         return thread_current()->child_status; // Return state of child after child exits
-    /*my code */
+        /*my code */
     }
 
-  return -1;
+    return -1;
 }
-/*my code */ 
+/*my code */
 struct thread* tid_child(tid_t tid){
     struct thread* current = thread_current();
     struct list* children = &current->children;
@@ -143,17 +143,17 @@ struct thread* tid_child(tid_t tid){
     return NULL;
 }
 
-/* my code */ 
+/* my code */
 
 /* Free the current process's resources. */
 void
 process_exit (void)
 {
-  struct thread *cur = thread_current ();
-   
-   
-   /*my code*/ 
-   
+    struct thread *cur = thread_current ();
+
+
+    /*my code*/
+
     if (cur->parent != NULL) {
         struct thread *parent = cur->parent;
         if (parent->waiting_for == cur->tid) {  // Parent is waiting for me
@@ -193,25 +193,25 @@ process_exit (void)
         sema_up(&child->parent_child_sync);
         list_remove(&child->child_elem);
     }
-   
-   /*mycode */ 
-  uint32_t *pd;
 
-  /* Destroy the current process's page directory and switch back
-     to the kernel-only page directory. */
-  pd = cur->pagedir;
-  if (pd != NULL) 
+    /*mycode */
+    uint32_t *pd;
+
+    /* Destroy the current process's page directory and switch back
+       to the kernel-only page directory. */
+    pd = cur->pagedir;
+    if (pd != NULL)
     {
-      /* Correct ordering here is crucial.  We must set
-         cur->pagedir to NULL before switching page directories,
-         so that a timer interrupt can't switch back to the
-         process page directory.  We must activate the base page
-         directory before destroying the process's page
-         directory, or our active page directory will be one
-         that's been freed (and cleared). */
-      cur->pagedir = NULL;
-      pagedir_activate (NULL);
-      pagedir_destroy (pd);
+        /* Correct ordering here is crucial.  We must set
+           cur->pagedir to NULL before switching page directories,
+           so that a timer interrupt can't switch back to the
+           process page directory.  We must activate the base page
+           directory before destroying the process's page
+           directory, or our active page directory will be one
+           that's been freed (and cleared). */
+        cur->pagedir = NULL;
+        pagedir_activate (NULL);
+        pagedir_destroy (pd);
     }
 }
 
@@ -221,16 +221,16 @@ process_exit (void)
 void
 process_activate (void)
 {
-  struct thread *t = thread_current ();
+    struct thread *t = thread_current ();
 
-  /* Activate thread's page tables. */
-  pagedir_activate (t->pagedir);
+    /* Activate thread's page tables. */
+    pagedir_activate (t->pagedir);
 
-  /* Set thread's kernel stack for use in processing
-     interrupts. */
-  tss_update ();
+    /* Set thread's kernel stack for use in processing
+       interrupts. */
+    tss_update ();
 }
-
+
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 
@@ -247,7 +247,7 @@ typedef uint16_t Elf32_Half;
 /* Executable header.  See [ELF1] 1-4 to 1-8.
    This appears at the very beginning of an ELF binary. */
 struct Elf32_Ehdr
-  {
+{
     unsigned char e_ident[16];
     Elf32_Half    e_type;
     Elf32_Half    e_machine;
@@ -262,13 +262,13 @@ struct Elf32_Ehdr
     Elf32_Half    e_shentsize;
     Elf32_Half    e_shnum;
     Elf32_Half    e_shstrndx;
-  };
+};
 
 /* Program header.  See [ELF1] 2-2 to 2-4.
    There are e_phnum of these, starting at file offset e_phoff
    (see [ELF1] 1-6). */
 struct Elf32_Phdr
-  {
+{
     Elf32_Word p_type;
     Elf32_Off  p_offset;
     Elf32_Addr p_vaddr;
@@ -277,7 +277,7 @@ struct Elf32_Phdr
     Elf32_Word p_memsz;
     Elf32_Word p_flags;
     Elf32_Word p_align;
-  };
+};
 
 /* Values for p_type.  See [ELF1] 2-3. */
 #define PT_NULL    0            /* Ignore. */
@@ -565,48 +565,55 @@ install_page (void *upage, void *kpage, bool writable)
             && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
-void push_to_stack(char* args, void** esp, char** save_ptr)
+void push_to_stack(char *file_name, void **esp, char **save_ptr)
 {
-    int count_args = 0;
-    char* ptr = args;
-    int size = 0;
 
-    while(ptr != NULL)
-    {
-        int len = strlen(ptr)+1;
-        *esp -= len;
-        memcpy(*esp, ptr, len);
-        size += len;
-        count_args++;
+    void * stack_pointer = *esp;
+    int number_of_args=0;
+    char * ptr = file_name;
+    int all_args_size = 0;
+    /* Push args to stack */
+    while (ptr != NULL){
+        stack_pointer -= (strlen(ptr) + 1);
+        memcpy(stack_pointer, ptr, strlen(ptr) + 1);
+        all_args_size += strlen(ptr) + 1;
+        number_of_args++;
         ptr = strtok_r(NULL, " ", save_ptr);
     }
-    int word_align = (4 - (size % 4)) % 4;
-    if(word_align != 0) {
-        *esp -= word_align;
-        memset(*esp, 0, word_align);
+
+    char * stack_args = stack_pointer;
+    /* Push zeros as word-align */
+    int align = (4 - (all_args_size%4) )%4;
+    if(align != 0) {
+        stack_pointer -= align;
+        memset(stack_pointer, 0, align);
+    }
+    /* Push NULL pointer at end of args */
+    stack_pointer -= sizeof(char *);
+    memset(stack_pointer,0,1);
+
+    /* Push addresses of args */
+    for(int i = number_of_args-1 ; i>=0 ; i--){
+        stack_pointer -=  sizeof(char *);
+        *(char**)stack_pointer = stack_args;
+        stack_args += (strlen(stack_args)+1);
     }
 
-    *esp -= sizeof(char*);
-    memset(*esp, 0, 1);
 
-    char* stack_ptr = *esp;
-    char* arguments = stack_ptr;
-    for(int i = count_args-1; i >= 0 ; i--){
-        stack_ptr -=  sizeof(char*);
-        *(char**)stack_ptr = arguments;
-        arguments += strlen(arguments)+1;
-    }
 
-    char** address = (char**)stack_ptr;
-    stack_ptr -= sizeof(char**);
-    *(char***)stack_ptr = address;
+    /* Push address of first address */
+    char** address = (char**)stack_pointer;
+    stack_pointer -= sizeof(char**);
+    *(char***)stack_pointer = address;
 
-    stack_ptr -= sizeof(int);
-    *(int*)stack_ptr = count_args;
+    /* Push number of args */
+    stack_pointer -= sizeof(int);
+    *(int *)stack_pointer = number_of_args;
 
-    stack_ptr -= sizeof(int*);
-    *(int**)stack_ptr = 0;
-    *esp = stack_ptr;
-
+    /* Push NULL as a return address */
+    stack_pointer -= sizeof(int *);
+    *(int**)stack_pointer = 0;
+    *esp = stack_pointer;
+    return;
 }
-   
+
