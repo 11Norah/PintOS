@@ -590,11 +590,11 @@ void push_to_stack(char* args, void** esp, char** save_ptr)
     memset(*esp, 0, 1);
 
     char* stack_ptr = *esp;
-    char* args = stack_ptr
+    char* arguments = stack_ptr;
     for(int i = count_args-1; i >= 0 ; i--){
         stack_ptr -=  sizeof(char*);
-        *(char**)stack_ptr = args;
-        args += strlen(args)+1;
+        *(char**)stack_ptr = arguments;
+        args += strlen(arguments)+1;
     }
 
     char** address = (char**)stack_ptr;
@@ -604,8 +604,7 @@ void push_to_stack(char* args, void** esp, char** save_ptr)
     stack_ptr -= sizeof(int);
     *(int*)stack_ptr = count_args;
 
-    /* Push NULL as a return address */
-    stack_pointer -= sizeof(int*);
+    stack_ptr -= sizeof(int*);
     *(int**)stack_ptr = 0;
     *esp = stack_ptr;
 
