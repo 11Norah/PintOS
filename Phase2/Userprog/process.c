@@ -1,5 +1,3 @@
-
-
 #include "userprog/process.h"
 #include <debug.h>
 #include <inttypes.h>
@@ -19,10 +17,12 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-
+#include "userprog/syscall.h"
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-
+/*my code*/
+struct thread* tid_child(tid_t tid);
+/*my code */
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -42,9 +42,18 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+   /*mycode */
+   sema_down(&thread_current()->parent_child_sync); 
+   /*mycode*/
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
-  return tid;
+   
+  /*my code */ 
+   if (thread_current()->child_creation_success)
+    return tid;
+   
+  return TID_ERROR;
+   /*my code */
 }
 
 /* A thread function that loads a user process and starts it
@@ -62,11 +71,27 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
+   /* my code */ 
+   struct thread* parent = thread_current()->parent;
+   if(!success){
+    parent->child_creation_success = 0; 
+    sema_up(&parent->parent_child_sync);
+   }else{ 
+      //success load//
+      struct list* children = &parent->children;
+      struct thread* child = thread_current();
+      list_push_back(children,&child->child_elem); 
+      parent->child_creation_success = 1;
+      sema_up(&parent->parent_child_sync); 
+      sema_down(&thread_current()->parent_child_sync);
+   }
+   
+   
+   /* my code */ 
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -88,15 +113,88 @@ start_process (void *file_name_)
    does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) 
-{
+{ /*my code */ 
+   thread_current()-> waiting_for = tid;
+    struct thread* child = tid_child(tid);
+
+    if(child != NULL){ 
+
+        list_remove(&child->child_elem); // Remove child from children list
+        sema_up(&child->parent_child_sync); // Wake up child
+        sema_down(&thread_current()->wait_for_child); // Wait for child to exit
+        return thread_current()->child_status; // Return state of child after child exits
+    /*my code */
+    }
+
   return -1;
 }
+/*my code */ 
+struct thread* tid_child(tid_t tid){
+    struct thread* current = thread_current();
+    struct list* children = &current->children;
+    struct list_elem *iter = list_begin(children);
+    while (iter != list_end(children)){
+        struct thread *entry = list_entry(iter,struct thread, child_elem);
+        iter = list_next(iter);
+        if(entry->tid == tid){
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+/* my code */ 
 
 /* Free the current process's resources. */
 void
 process_exit (void)
 {
   struct thread *cur = thread_current ();
+   
+   
+   /*my code*/ 
+   
+    if (cur->parent != NULL) {
+        struct thread *parent = cur->parent;
+        if (parent->waiting_for == cur->tid) {  // Parent is waiting for me
+            parent->child_status = thread_current()->exit_status; // Set parent to my exit status
+            parent->waiting_for = -1; // reset waiting for tid
+            parent->child_creation_success = 0; // reset child creation success
+            sema_up(&parent->wait_for_child); // Wake up parent
+        }
+
+    }
+
+    // Close executable file
+    file_close(thread_current()->executable);
+
+    thread_current()->executable = NULL;
+    thread_current()->parent = NULL;
+
+    struct list* process_files = &thread_current()->user_files;
+
+    // Free all open files
+    for(struct list_elem* iter = list_begin(process_files);
+        iter !=list_end(process_files) ; ){
+        struct user_file* file = list_entry(iter, struct user_file , elem);
+        iter=list_next(iter);
+        file_close(file->file);
+        list_remove(&file->elem);
+        free(file);
+    }
+
+    // Remove all children
+    struct list* children = &thread_current()->children;
+    struct list_elem * iter = list_begin(children);
+    while(iter != list_end(children)) {
+        struct thread * child = list_entry(iter,struct thread , child_elem);
+        iter = list_next(iter);
+        child->parent = NULL;
+        sema_up(&child->parent_child_sync);
+        list_remove(&child->child_elem);
+    }
+   
+   /*mycode */ 
   uint32_t *pd;
 
   /* Destroy the current process's page directory and switch back
