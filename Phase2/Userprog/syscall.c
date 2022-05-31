@@ -263,10 +263,8 @@ void WrapperCreate(struct intr_frame *f){
     if(!CheckValid(fileName)) {
             exit(-1);
     }
-    else{
-        int size = (unsigned) *((int *) f->esp + 2 );
-        f->eax = createFile(size ,fileName);
-    }
+    int size = (unsigned) *((int *) f->esp + 2 );
+    f->eax = createFile(size ,fileName);
 }
 
 int WriteToFile(unsigned initSize ,int fd ,char * buff){
@@ -294,14 +292,12 @@ int WriteToFile(unsigned initSize ,int fd ,char * buff){
 
 void WrapperWrite(struct intr_frame *f){
     int fd = *((int *) f->esp + 1);
-    char buff = (char *) (((int *) f->esp + 2));
+    char *buff = (char *) (*((int *) f->esp + 2));
     if(!CheckValid(buff) || fd ==0){
         exit(-1);
     }
-    else{
-        unsigned initSize = (unsigned)(((int) f->esp + 3));
-        f->eax = WriteToFile(initSize ,fd ,buff);
-    }
+    unsigned initSize = (unsigned)(*((int*) f->esp + 3));
+    f->eax = WriteToFile(initSize ,fd ,buff);
 }
 /////////call from process.c
 tid_t waiting(tid_t tid){
@@ -313,14 +309,14 @@ void WrapperWait(struct intr_frame *f){
         exit(-1);
     }
     else{
-        tid_t tid = ((int)f->esp + 1);
+        tid_t tid = *((int*)f->esp + 1);
         f->eax = waiting(tid);
     }
 }
 
 /////////call from process.c
 void WrapperExec(struct intr_frame *f){
-    char fileName = (char *) (((int *) f->esp + 1));
+    char* fileName = (char *) (*((int *) f->esp + 1));
     f->eax = process_execute(fileName);
 }
 
@@ -334,7 +330,7 @@ void exit(int stat){
 }
 
 void WrapperExit(struct intr_frame *f){
-    int stat = ((int)f->esp + 1);
+    int stat = *((int*)f->esp + 1);
     if(!is_user_vaddr(stat)) {
         f->eax = -1;
         exit(-1);
@@ -347,7 +343,7 @@ bool CheckValid ( void * threadName){
     return threadName!=NULL && is_user_vaddr(threadName) && pagedir_get_page(thread_current()->pagedir, threadName) != NULL;
 }
 bool Valid(struct intr_frame *f ){
-    return CheckValid((int*)f->esp) || (((int)f->esp) < 0) || ((int)f->esp) > 12;
+    return CheckValid((int*)f->esp) || ((*(int*)f->esp) < 0) || (*(int*)f->esp) > 12;
 }
 void halt(){
     printf("(halt) begin\n");
