@@ -326,7 +326,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     process_activate ();
 
     /* Open executable file. */
-    file = filesys_open (file_name);
+    file = filesys_open (raw);
     if (file == NULL)
     {
         printf ("load: %s: open failed\n", file_name);
@@ -342,7 +342,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
         || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
         || ehdr.e_phnum > 1024)
     {
-        printf ("load: %s: error loading executable\n", file_name);
+        printf ("load: %s: error loading executable\n", raw);
         goto done;
     }
 
